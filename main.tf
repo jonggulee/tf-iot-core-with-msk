@@ -80,3 +80,20 @@ module "cmk_msk" {
 
   tags = var.default_tags
 }
+
+# Secrets Manager
+module "secrets_manager_msk" {
+  source = "terraform-aws-modules/secrets-manager/aws"
+
+  name        = "AmazonMSK_iotcore_test"
+  description = "Secret for IoT Core test"
+
+  secret_string = jsonencode({
+    username = "iotcore-test"
+    password = "iotcore-test-password"
+  })
+
+  kms_key_id = module.cmk_msk.key_id
+
+  tags = var.default_tags
+}
