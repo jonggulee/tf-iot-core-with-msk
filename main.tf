@@ -97,3 +97,14 @@ module "secrets_manager_msk" {
 
   tags = var.default_tags
 }
+
+# Security Group
+module "security_group_msk" {
+  source = "terraform-aws-modules/security-group/aws"
+
+  name        = "iotcore-test-sg"
+  description = "Security group for IoT Core test"
+  vpc_id      = module.vpc.vpc_id
+
+  tags = var.default_tags
+}
