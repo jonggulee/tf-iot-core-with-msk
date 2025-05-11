@@ -19,7 +19,7 @@ module "vpc" {
 module "iam_policy_msk" {
   source = "terraform-aws-modules/iam/aws//modules/iam-policy"
 
-  name        = "iotcore-test-msk-policy"
+  name        = "iotcore-test-policy"
   description = "IAM policy for IoT Core test"
   policy      = <<EOF
 {
@@ -45,7 +45,7 @@ module "iam_policy_msk" {
             "secretsmanager:GetSecretValue",
             "secretsmanager:DescribeSecret"
          ],
-         "Resource": "arn:aws:secretsmanager:region:123456789012:secret:AmazonMSK_*"
+         "Resource": "arn:aws:secretsmanager:*:*:secret:AmazonMSK_*"
       }
    ]
 }
@@ -58,7 +58,7 @@ EOF
 module "iam_role_msk" {
   source = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
 
-  role_name             = "iotcore-test-msk-role"
+  role_name             = "iotcore-test-role"
   create_role           = true
   role_requires_mfa     = false
   trusted_role_services = ["iot.amazonaws.com"]
@@ -102,9 +102,48 @@ module "secrets_manager_msk" {
 module "security_group_msk" {
   source = "terraform-aws-modules/security-group/aws"
 
-  name        = "iotcore-test-sg"
+  name        = "iotcore-test-msk-sg"
   description = "Security group for IoT Core test"
   vpc_id      = module.vpc.vpc_id
 
   tags = var.default_tags
+}
+
+module "security_group_iotcore" {
+  source = "terraform-aws-modules/security-group/aws"
+
+  name        = "iotcore-test-iotcore-sg"
+  description = "Security group for IoT Core test"
+  vpc_id      = module.vpc.vpc_id
+
+  tags = var.default_tags
+}
+
+# MSK
+module "msk_cluster" {
+  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+
+  name                   = "iotcore-test-msk-cluster"
+  kafka_version          = "3.6.0"
+  number_of_broker_nodes = 2
+
+  broker_node_client_subnets  = module.vpc.private_subnets
+  broker_node_instance_type   = "kafka.t3.small"
+  broker_node_security_groups = [module.security_group_msk.security_group_id]
+  broker_node_storage_info = {
+    ebs_storage_info = { volume_size = 10 }
+  }
+
+  client_authentication = {
+    sasl = {
+      scram = true
+    }
+  }
+
+  create_scram_secret_association          = true
+  scram_secret_association_secret_arn_list = [module.secrets_manager_msk.secret_arn]
+
+  tags = var.default_tags
+
+  depends_on = [module.secrets_manager_msk, module.security_group_msk]
 }
