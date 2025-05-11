@@ -68,3 +68,16 @@ module "iam_role_msk" {
 
   tags = var.default_tags
 }
+
+# Customer Managed Key
+module "cmk_msk" {
+  source = "terraform-aws-modules/kms/aws"
+
+  aliases     = ["iotcore/msk/test"]
+  description = "KMS key for IoT Core test"
+  key_usage   = "ENCRYPT_DECRYPT"
+  key_users = [module.iam_role_msk.iam_role_arn]
+  
+  tags = var.default_tags
+}
+
